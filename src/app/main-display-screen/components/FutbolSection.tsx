@@ -17,7 +17,7 @@ export default function FutbolSection() {
   const [activeMainChip, setActiveMainChip] = useState<MainChip>('boca');
   const [activeSubChip, setActiveSubChip] = useState<SubChip>('plantel');
 
-  // SAFE LOAD
+  // 🔥 LOAD SEGURO (NO PIERDE DATOS)
   useEffect(() => {
     try {
       const saved = localStorage.getItem("sportsData");
@@ -25,20 +25,23 @@ export default function FutbolSection() {
 
       const parsed = JSON.parse(saved);
 
+      const safeTeams:any = { ...teamsData };
+
       Object.keys(parsed).forEach((team) => {
-        parsed[team].players = (parsed[team]?.players ?? []).map((p: any) => ({
-          id: p?.id ?? `${team}-${Math.random()}`,
-          name: p?.name ?? "Jugador",
-          number: p?.number ?? 0,
-          position: p?.position ?? "DEL",
-          injured: !!p?.injured
-        }));
+        safeTeams[team] = {
+          ...teamsData[team as TeamId], // base original
+          ...parsed[team],
+          players: (parsed[team]?.players ?? []).map((p:any) => ({
+            id: p?.id ?? `${team}-${Math.random()}`,
+            name: p?.name ?? "Jugador",
+            number: p?.number ?? 0,
+            position: p?.position ?? "DEL",
+            injured: !!p?.injured
+          }))
+        };
       });
 
-      setTeams((prev:any)=>({
-        ...prev,
-        ...parsed
-      }));
+      setTeams(safeTeams);
 
     } catch (e) {
       console.log("load error");
@@ -71,6 +74,24 @@ export default function FutbolSection() {
     DEL:'bg-red-500/20 text-red-400 border-red-500/30',
   };
 
+  const saveLocal = () => {
+    const saved = localStorage.getItem("sportsData");
+    const data = saved ? JSON.parse(saved) : {};
+
+    const updated = {
+      ...data,
+      [activeMainChip]: {
+        ...teamsData[activeMainChip as TeamId],
+        ...data?.[activeMainChip],
+        players: activeTeam?.players ?? [],
+        dt: activeTeam?.dt,
+        capitan: activeTeam?.capitan
+      }
+    };
+
+    localStorage.setItem("sportsData", JSON.stringify(updated));
+  };
+
   return (
     <div className="space-y-5 fade-in">
 
@@ -94,11 +115,11 @@ export default function FutbolSection() {
         <div className="tv-card">
           <h3 className="font-bold mb-3">Tabla Zona A</h3>
 
-          {(standingsZonaA ?? []).map((row:StandingsRow)=>(
+          {standingsZonaA.map((row:StandingsRow)=>(
             <div key={row.id} className="flex justify-between py-2">
-              <span>{row?.pos ?? "-"}</span>
-              <span>{row?.team ?? "-"}</span>
-              <span>{row?.pts ?? 0}</span>
+              <span>{row.pos}</span>
+              <span>{row.team}</span>
+              <span>{row.pts}</span>
             </div>
           ))}
         </div>
@@ -127,7 +148,7 @@ export default function FutbolSection() {
           {/* HEADER */}
           <div>
             <h2 className="text-3xl font-bold">
-              {activeTeam?.name ?? "Equipo"}
+              {activeTeam?.name}
             </h2>
             <p className="text-sm text-muted">
               DT: {activeTeam?.dt ?? "-"} · Capitán: {activeTeam?.capitan ?? "-"}
@@ -138,27 +159,27 @@ export default function FutbolSection() {
           {activeSubChip === 'plantel' && (
             <div className="space-y-3">
 
-              {(activeTeam?.players ?? [])
-                .slice()
+              {[...(activeTeam?.players ?? [])]
                 .sort((a:Player,b:Player)=> (a?.number??0)-(b?.number??0))
                 .map((player:Player)=>(
-                  <div key={player?.id ?? Math.random()} className="tv-card flex justify-between">
+                  <div key={player.id} className="tv-card flex justify-between items-center">
 
-                    <div>
-                      {player?.number ?? 0} - {player?.name ?? "Jugador"}
+                    {/* BOLITA ESTILO ORIGINAL */}
+                    <div className="flex items-center gap-3">
+
+                      <div className={`w-3 h-3 rounded-full ${
+                        player?.injured ? 'bg-red-500' : 'bg-green-500'
+                      }`} />
+
+                      <div>
+                        {player?.number ?? 0} - {player?.name ?? "Jugador"}
+                      </div>
+
                     </div>
 
-                    <div>
-                      <span className={`px-2 rounded ${posColors[player?.position]}`}>
-                        {player?.position ?? "DEL"}
-                      </span>
-
-                      {player?.injured && (
-                        <span className="text-red-400 ml-2">
-                          Lesionado
-                        </span>
-                      )}
-                    </div>
+                    <span className={`px-2 rounded text-xs ${posColors[player?.position]}`}>
+                      {player?.position ?? "DEL"}
+                    </span>
 
                   </div>
                 ))
@@ -169,10 +190,10 @@ export default function FutbolSection() {
 
           {/* GOLEADORES */}
           {activeSubChip === 'goleadores' && (
-            <div className="tv-card">
+            <div className="tv-card space-y-2">
               {(activeTeam?.goleadores ?? []).map((g:any)=>(
-                <div key={g?.id}>
-                  {g?.name ?? "-"} - {g?.goals ?? 0}
+                <div key={g.id}>
+                  ⚽ {g.name} - {g.goals}
                 </div>
               ))}
             </div>
@@ -180,10 +201,10 @@ export default function FutbolSection() {
 
           {/* COPAS */}
           {activeSubChip === 'copas' && (
-            <div className="tv-card">
+            <div className="tv-card space-y-2">
               {(activeTeam?.copas ?? []).map((c:any)=>(
-                <div key={c?.id}>
-                  {c?.name ?? "-"} {c?.year ?? ""}
+                <div key={c.id}>
+                  🏆 {c.name} ({c.year})
                 </div>
               ))}
             </div>
@@ -194,9 +215,9 @@ export default function FutbolSection() {
             <div className="tv-card">
               {(activeTeam?.descensos ?? []).length === 0
                 ? "Sin descensos"
-                : activeTeam?.descensos?.map((d:any)=>(
-                  <div key={d?.id}>
-                    {d?.year} - {d?.detail}
+                : activeTeam.descensos.map((d:any)=>(
+                  <div key={d.id}>
+                    {d.year} - {d.detail}
                   </div>
                 ))
               }
@@ -206,7 +227,7 @@ export default function FutbolSection() {
           {/* HISTORIA */}
           {activeSubChip === 'historia' && (
             <div className="tv-card">
-              {activeTeam?.historia ?? "Sin historia"}
+              {activeTeam?.historia}
             </div>
           )}
 
