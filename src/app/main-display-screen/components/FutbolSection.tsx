@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { teamsData, standingsZonaA, standingsZonaB } from '@/lib/sportsData';
 import type { TeamData, Player, StandingsRow } from '@/lib/sportsData';
 import { AlertCircle, Trophy, TrendingDown, BookOpen } from 'lucide-react';
@@ -257,13 +257,14 @@ function HistoriaView({ team }: { team: TeamData }) {
 type MainChip = TeamId | 'tabla';
 
 export default function FutbolSection() {
- const [teams, setTeams] = useState<any>(teamsData);
+const [teams, setTeams] = useState<typeof teamsData>(teamsData);
 
 useEffect(() => {
   try {
     const saved = localStorage.getItem("sportsData");
     if (saved) {
-      setTeams(JSON.parse(saved));
+      const parsed = JSON.parse(saved);
+      setTeams(parsed);
     }
   } catch (e) {
     console.log("error loading saved data");
