@@ -1,5 +1,5 @@
 'use client';
-
+console.log("🔥 ESTOY USANDO ESTE FUTBOLSECTION");
 import React, { useMemo, useState } from 'react';
 import { Trophy, Users, Target, Flag } from 'lucide-react';
 
