@@ -1,239 +1,235 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { teamsData, standingsZonaA, standingsZonaB } from '@/lib/sportsData';
-import type { TeamData, Player, StandingsRow } from '@/lib/sportsData';
-import { AlertCircle, Trophy, TrendingDown, BookOpen } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { teamsData } from '@/lib/sportsData';
+import type { Player, Position } from '@/lib/sportsData';
+import { toast } from 'sonner';
+import { PlusCircle, Trash2, Save, User, Shield } from 'lucide-react';
 
 type TeamId = 'boca' | 'river' | 'central' | 'newells';
-type SubChip = 'todos' | 'plantel' | 'goleadores' | 'copas' | 'descensos' | 'historia';
-type TablaZona = 'zonaA' | 'zonaB';
 
-type MainChip = TeamId | 'tabla';
+const teamOptions: { id: TeamId; label: string }[] = [
+  { id: 'boca', label: 'Boca Juniors' },
+  { id: 'river', label: 'River Plate' },
+  { id: 'central', label: 'Rosario Central' },
+  { id: 'newells', label: "Newell's Old Boys" },
+];
 
-export default function FutbolSection() {
+const positions: Position[] = ['ARQ', 'DEF', 'MED', 'DEL'];
 
-  const [teams, setTeams] = useState<any>(teamsData);
-  const [activeMainChip, setActiveMainChip] = useState<MainChip>('boca');
-  const [activeSubChip, setActiveSubChip] = useState<SubChip>('plantel');
+// 🎨 Estado visual tipo “chip”
+function StatusChip({ injured }: { injured?: boolean }) {
+  return (
+    <span
+      className={`px-3 py-1 rounded-full text-xs font-bold border transition-all ${
+        injured
+          ? 'bg-[hsl(var(--accent)/0.15)] text-[hsl(var(--accent))] border-[hsl(var(--accent)/0.3)]'
+          : 'bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.3)]'
+      }`}
+    >
+      {injured ? 'Lesionado' : 'Disponible'}
+    </span>
+  );
+}
 
-  // 🔥 LOAD SEGURO (NO PIERDE DATOS)
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("sportsData");
-      if (!saved) return;
+export default function FutbolEditor() {
+  const [activeTeam, setActiveTeam] = useState<TeamId>('boca');
 
-      const parsed = JSON.parse(saved);
+  const [players, setPlayers] = useState<Player[]>(
+    teamsData[activeTeam].players
+  );
 
-      const safeTeams:any = { ...teamsData };
+  const [dt, setDt] = useState(teamsData[activeTeam].dt);
+  const [capitan, setCapitan] = useState(teamsData[activeTeam].capitan);
 
-      Object.keys(parsed).forEach((team) => {
-        safeTeams[team] = {
-          ...teamsData[team as TeamId], // base original
-          ...parsed[team],
-          players: (parsed[team]?.players ?? []).map((p:any) => ({
-            id: p?.id ?? `${team}-${Math.random()}`,
-            name: p?.name ?? "Jugador",
-            number: p?.number ?? 0,
-            position: p?.position ?? "DEL",
-            injured: !!p?.injured
-          }))
-        };
-      });
+  const [saving, setSaving] = useState(false);
 
-      setTeams(safeTeams);
+  const [newPlayer, setNewPlayer] = useState({
+    number: '',
+    name: '',
+    position: 'DEL' as Position,
+  });
 
-    } catch (e) {
-      console.log("load error");
-    }
-  }, []);
-
-  const isTabla = activeMainChip === 'tabla';
-  const activeTeam = isTabla ? null : teams?.[activeMainChip as TeamId];
-
-  const mainChips = [
-    { id: 'boca', label: 'Boca' },
-    { id: 'river', label: 'River' },
-    { id: 'central', label: 'Rosario Central' },
-    { id: 'newells', label: "Newell's" },
-    { id: 'tabla', label: 'Tabla' }
-  ];
-
-  const subChips = [
-    { id:'plantel', label:'Plantel'},
-    { id:'goleadores', label:'Goleadores'},
-    { id:'copas', label:'Copas'},
-    { id:'descensos', label:'Descensos'},
-    { id:'historia', label:'Historia'}
-  ];
-
-  const posColors: Record<string,string> = {
-    ARQ:'bg-amber-500/20 text-amber-400 border-amber-500/30',
-    DEF:'bg-blue-500/20 text-blue-400 border-blue-500/30',
-    MED:'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-    DEL:'bg-red-500/20 text-red-400 border-red-500/30',
+  const switchTeam = (id: TeamId) => {
+    setActiveTeam(id);
+    setPlayers(teamsData[id].players);
+    setDt(teamsData[id].dt);
+    setCapitan(teamsData[id].capitan);
   };
 
-  const saveLocal = () => {
-    const saved = localStorage.getItem("sportsData");
-    const data = saved ? JSON.parse(saved) : {};
+  const addPlayer = () => {
+    if (!newPlayer.name.trim() || !newPlayer.number) return;
 
-    const updated = {
-      ...data,
-      [activeMainChip]: {
-        ...teamsData[activeMainChip as TeamId],
-        ...data?.[activeMainChip],
-        players: activeTeam?.players ?? [],
-        dt: activeTeam?.dt,
-        capitan: activeTeam?.capitan
-      }
+    const num = parseInt(newPlayer.number);
+
+    const player: Player = {
+      id: `${activeTeam}-${Date.now()}`,
+      number: num,
+      name: newPlayer.name.trim(),
+      position: newPlayer.position,
     };
 
-    localStorage.setItem("sportsData", JSON.stringify(updated));
+    setPlayers((prev) => [...prev, player]);
+    setNewPlayer({ number: '', name: '', position: 'DEL' });
+
+    toast.success('Jugador agregado');
+  };
+
+  const removePlayer = (id: string) => {
+    setPlayers((prev) => prev.filter((p) => p.id !== id));
+    toast.success('Jugador eliminado');
+  };
+
+  const toggleInjured = (id: string) => {
+    setPlayers((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, injured: !p.injured } : p
+      )
+    );
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+
+    try {
+      const saved = localStorage.getItem('sportsData');
+      const data = saved ? JSON.parse(saved) : {};
+
+      const updated = {
+        ...data,
+        [activeTeam]: {
+          ...(data?.[activeTeam] || {}),
+          dt,
+          capitan,
+          players,
+        },
+      };
+
+      localStorage.setItem('sportsData', JSON.stringify(updated));
+
+      toast.success('Plantel guardado correctamente');
+    } catch (err) {
+      toast.error('Error al guardar');
+    }
+
+    setSaving(false);
   };
 
   return (
-    <div className="space-y-5 fade-in">
+    <div className="space-y-6 fade-in">
 
-      {/* MAIN CHIPS */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {mainChips.map(tc=>(
+      {/* 🔵 SELECTOR DE EQUIPOS (chips estilo selección) */}
+      <div className="flex gap-2 overflow-x-auto">
+        {teamOptions.map((t) => (
           <button
-            key={tc.id}
-            onClick={()=>setActiveMainChip(tc.id as MainChip)}
-            className={`px-5 py-2 rounded-full ${
-              activeMainChip===tc.id?'chip-active':'chip-inactive'
+            key={t.id}
+            onClick={() => switchTeam(t.id)}
+            className={`px-5 py-2 rounded-full font-semibold transition-all ${
+              activeTeam === t.id
+                ? 'chip-active'
+                : 'chip-inactive'
             }`}
           >
-            {tc.label}
+            {t.label}
           </button>
         ))}
       </div>
 
-      {/* TABLA */}
-      {isTabla && (
-        <div className="tv-card">
-          <h3 className="font-bold mb-3">Tabla Zona A</h3>
-
-          {standingsZonaA.map((row:StandingsRow)=>(
-            <div key={row.id} className="flex justify-between py-2">
-              <span>{row.pos}</span>
-              <span>{row.team}</span>
-              <span>{row.pts}</span>
-            </div>
-          ))}
+      {/* 🧠 DT + CAPITÁN */}
+      <div className="tv-card grid grid-cols-2 gap-4">
+        <div>
+          <p className="text-xs text-[hsl(var(--muted))]">Director Técnico</p>
+          <input
+            value={dt}
+            onChange={(e) => setDt(e.target.value)}
+            className="w-full mt-1 px-3 py-2 rounded-xl bg-[hsl(var(--surface-elevated))] border border-[hsl(var(--border))]"
+          />
         </div>
-      )}
 
-      {/* TEAM */}
-      {!isTabla && activeTeam && (
+        <div>
+          <p className="text-xs text-[hsl(var(--muted))]">Capitán</p>
+          <input
+            value={capitan}
+            onChange={(e) => setCapitan(e.target.value)}
+            className="w-full mt-1 px-3 py-2 rounded-xl bg-[hsl(var(--surface-elevated))] border border-[hsl(var(--border))]"
+          />
+        </div>
+      </div>
 
-        <>
+      {/* ➕ AGREGAR JUGADOR */}
+      <div className="tv-card flex flex-wrap gap-2 items-end">
+        <input
+          placeholder="Nombre"
+          value={newPlayer.name}
+          onChange={(e) =>
+            setNewPlayer((p) => ({ ...p, name: e.target.value }))
+          }
+          className="flex-1 min-w-[120px] px-3 py-2 rounded-xl border"
+        />
 
-          {/* SUB CHIPS */}
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {subChips.map(sc=>(
-              <button
-                key={sc.id}
-                onClick={()=>setActiveSubChip(sc.id as SubChip)}
-                className={`px-4 py-2 rounded-full ${
-                  activeSubChip===sc.id?'chip-active':'chip-inactive'
-                }`}
-              >
-                {sc.label}
+        <input
+          placeholder="Nro"
+          value={newPlayer.number}
+          onChange={(e) =>
+            setNewPlayer((p) => ({ ...p, number: e.target.value }))
+          }
+          className="w-20 px-3 py-2 rounded-xl border"
+        />
+
+        <button
+          onClick={addPlayer}
+          className="px-4 py-2 rounded-xl bg-[hsl(var(--primary))] text-white"
+        >
+          <PlusCircle size={16} /> Agregar
+        </button>
+      </div>
+
+      {/* 🧩 JUGADORES (ESTILO “CARDS PRO”) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {players.map((p) => (
+          <div
+            key={p.id}
+            className="tv-card flex items-center justify-between gap-3"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[hsl(var(--primary)/0.1)] flex items-center justify-center font-bold text-[hsl(var(--primary))]">
+                {p.number}
+              </div>
+
+              <div>
+                <p className="font-semibold">{p.name}</p>
+                <p className="text-xs text-[hsl(var(--muted))]">
+                  {p.position}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 items-end">
+              <button onClick={() => toggleInjured(p.id)}>
+                <StatusChip injured={p.injured} />
               </button>
-            ))}
+
+              <button
+                onClick={() => removePlayer(p.id)}
+                className="text-[hsl(var(--accent))]"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
           </div>
+        ))}
+      </div>
 
-          {/* HEADER */}
-          <div>
-            <h2 className="text-3xl font-bold">
-              {activeTeam?.name}
-            </h2>
-            <p className="text-sm text-muted">
-              DT: {activeTeam?.dt ?? "-"} · Capitán: {activeTeam?.capitan ?? "-"}
-            </p>
-          </div>
-
-          {/* PLANTEL */}
-          {activeSubChip === 'plantel' && (
-            <div className="space-y-3">
-
-              {[...(activeTeam?.players ?? [])]
-                .sort((a:Player,b:Player)=> (a?.number??0)-(b?.number??0))
-                .map((player:Player)=>(
-                  <div key={player.id} className="tv-card flex justify-between items-center">
-
-                    {/* BOLITA ESTILO ORIGINAL */}
-                    <div className="flex items-center gap-3">
-
-                      <div className={`w-3 h-3 rounded-full ${
-                        player?.injured ? 'bg-red-500' : 'bg-green-500'
-                      }`} />
-
-                      <div>
-                        {player?.number ?? 0} - {player?.name ?? "Jugador"}
-                      </div>
-
-                    </div>
-
-                    <span className={`px-2 rounded text-xs ${posColors[player?.position]}`}>
-                      {player?.position ?? "DEL"}
-                    </span>
-
-                  </div>
-                ))
-              }
-
-            </div>
-          )}
-
-          {/* GOLEADORES */}
-          {activeSubChip === 'goleadores' && (
-            <div className="tv-card space-y-2">
-              {(activeTeam?.goleadores ?? []).map((g:any)=>(
-                <div key={g.id}>
-                  ⚽ {g.name} - {g.goals}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* COPAS */}
-          {activeSubChip === 'copas' && (
-            <div className="tv-card space-y-2">
-              {(activeTeam?.copas ?? []).map((c:any)=>(
-                <div key={c.id}>
-                  🏆 {c.name} ({c.year})
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* DESCENSOS */}
-          {activeSubChip === 'descensos' && (
-            <div className="tv-card">
-              {(activeTeam?.descensos ?? []).length === 0
-                ? "Sin descensos"
-                : activeTeam.descensos.map((d:any)=>(
-                  <div key={d.id}>
-                    {d.year} - {d.detail}
-                  </div>
-                ))
-              }
-            </div>
-          )}
-
-          {/* HISTORIA */}
-          {activeSubChip === 'historia' && (
-            <div className="tv-card">
-              {activeTeam?.historia}
-            </div>
-          )}
-
-        </>
-      )}
-
+      {/* 💾 GUARDAR */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-6 py-3 rounded-xl bg-[hsl(var(--primary))] text-white font-bold"
+        >
+          <Save size={16} /> {saving ? 'Guardando...' : 'Guardar'}
+        </button>
+      </div>
     </div>
   );
 }
