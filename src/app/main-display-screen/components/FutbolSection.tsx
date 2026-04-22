@@ -1,197 +1,246 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { teamsData } from '@/lib/sportsData';
-import type { Player, Position } from '@/lib/sportsData';
-import { Trophy, Users, Target, ScrollText } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Trophy, Users, Target, Flag } from 'lucide-react';
 
-type TeamId = 'boca' | 'river' | 'central' | 'newells';
+type ClubId = 'boca' | 'river' | 'central' | 'newells';
 
-const teamLabels: Record<TeamId, string> = {
-  boca: 'Boca Juniors',
-  river: 'River Plate',
-  central: 'Rosario Central',
-  newells: "Newell's Old Boys",
+type Player = {
+  number?: number;
+  name: string;
+  position?: string;
 };
 
-type View = 'plantel' | 'goleadores' | 'copas' | 'historia';
+type ClubData = {
+  name: string;
+  dt: string;
+  players: {
+    arqueros: Player[];
+    defensores: Player[];
+    laterales: Player[];
+    mediocampistas: Player[];
+    ofensivos?: Player[];
+    delanteros: Player[];
+  };
+  titles?: string[];
+  descensos?: string[];
+};
+
+const data: Record<ClubId, ClubData> = {
+  boca: {
+    name: "Boca Juniors",
+    dt: "Claudio Úbeda",
+    players: {
+      arqueros: [
+        { number: 12, name: "Leandro Brey" },
+        { number: 13, name: "Javier García" },
+        { number: 25, name: "Agustín Marchesín" },
+      ],
+      defensores: [
+        { name: "Agustín Heredia" },
+        { name: "Walter Molas" },
+        { number: 40, name: "Lautaro Di Lollo" },
+        { number: 4, name: "Nicolás Figal" },
+      ],
+      laterales: [
+        { number: 23, name: "Marcelo Weigandt" },
+        { number: 3, name: "Lautaro Blanco" },
+        { number: 24, name: "Juan Barinaga" },
+      ],
+      mediocampistas: [
+        { number: 5, name: "Leandro Paredes" },
+        { number: 21, name: "Ander Herrera" },
+        { number: 10, name: "Edinson Cavani" },
+      ],
+      delanteros: [
+        { number: 7, name: "Exequiel Zeballos" },
+        { number: 9, name: "Milton Giménez" },
+        { number: 10, name: "Edinson Cavani" },
+      ],
+    },
+    titles: [
+      "Sudamericana 2004 vs Bolívar",
+      "Sudamericana 2005 vs Pumas UNAM",
+    ],
+    descensos: [],
+  },
+
+  river: {
+    name: "River Plate",
+    dt: "Eduardo Coudet",
+    players: {
+      arqueros: [{ number: 1, name: "Franco Armani" }],
+      defensores: [{ number: 4, name: "Paulo Díaz" }],
+      laterales: [{ number: 16, name: "Fabricio Bustos" }],
+      mediocampistas: [{ number: 10, name: "Juanfer Quintero" }],
+      delanteros: [{ number: 9, name: "Sebastián Driussi" }],
+    },
+    titles: ["Libertadores 2018", "Libertadores 2015", "Libertadores 1996"],
+  },
+
+  central: {
+    name: "Rosario Central",
+    dt: "Jorge Almirón",
+    players: {
+      arqueros: [{ number: 1, name: "Jorge Broun" }],
+      defensores: [{ number: 2, name: "Carlos Quintana" }],
+      laterales: [{ number: 3, name: "Agustín Sández" }],
+      mediocampistas: [{ number: 5, name: "Franco Ibarra" }],
+      delanteros: [{ number: 9, name: "Alejo Véliz" }],
+    },
+    titles: ["Liga 2024/25", "Copa Liga 2023"],
+  },
+
+  newells: {
+    name: "Newell's Old Boys",
+    dt: "Frank Kudelka",
+    players: {
+      arqueros: [{ name: "Williams Barlasina" }],
+      defensores: [{ name: "Bruno Cabrera" }],
+      laterales: [{ name: "Martín Luciano" }],
+      mediocampistas: [{ name: "Rodrigo Herrera" }],
+      delanteros: [{ name: "Ignacio Ramírez" }],
+    },
+    titles: ["1993", "1992", "1988"],
+    descensos: ["1960"],
+  },
+};
+
+const tabs = [
+  { id: 'plantel', label: 'Plantel', icon: Users },
+  { id: 'goleadores', label: 'Goleadores', icon: Target },
+  { id: 'copas', label: 'Copas', icon: Trophy },
+  { id: 'historia', label: 'Historia', icon: Flag },
+] as const;
 
 export default function FutbolSection() {
-  const [activeTeam, setActiveTeam] = useState<TeamId>('boca');
-  const [view, setView] = useState<View>('plantel');
+  const [club, setClub] = useState<ClubId>('boca');
+  const [tab, setTab] = useState<'plantel' | 'goleadores' | 'copas' | 'historia'>('plantel');
 
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [dt, setDt] = useState('');
-  const [capitan, setCapitan] = useState('');
+  const team = data[club];
 
-  useEffect(() => {
-    const saved = localStorage.getItem('sportsData');
+  const renderPlayers = (list: Player[]) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {list.map((p, i) => (
+        <div
+          key={i}
+          className="bg-[#1A1A1A] rounded-xl p-4 border border-white/10 flex justify-between items-center"
+        >
+          <div>
+            <p className="text-white font-bold">
+              <span className="text-yellow-400 mr-2">{p.number ?? '—'}</span>
+              {p.name}
+            </p>
+            <p className="text-gray-400 text-sm">{p.position}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
-    if (saved) {
-      const data = JSON.parse(saved);
-
-      if (data?.[activeTeam]) {
-        setPlayers(data[activeTeam].players || []);
-        setDt(data[activeTeam].dt || '');
-        setCapitan(data[activeTeam].capitan || '');
-        return;
-      }
-    }
-
-    setPlayers(teamsData[activeTeam].players);
-    setDt(teamsData[activeTeam].dt);
-    setCapitan(teamsData[activeTeam].capitan);
-  }, [activeTeam]);
-
-  const posColors: Record<Position, string> = {
-    ARQ: 'text-amber-400',
-    DEF: 'text-blue-400',
-    MED: 'text-emerald-400',
-    DEL: 'text-red-400',
-  };
-
-  const injuredBadge = (injured?: boolean) =>
-    injured
-      ? 'bg-red-500/20 text-red-400 border-red-500/30'
-      : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
-
-  const tabs = [
-    { id: 'plantel', label: 'Plantel', icon: Users },
-    { id: 'goleadores', label: 'Goleadores', icon: Target },
-    { id: 'copas', label: 'Copas', icon: Trophy },
-    { id: 'historia', label: 'Historia', icon: ScrollText },
-  ] as const;
-
-  const data = teamsData[activeTeam];
+  const zonas = useMemo(() => ({
+    A: ["Boca Juniors", "River Plate"],
+    B: ["Rosario Central", "Newell's Old Boys"],
+  }), []);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6 text-white">
 
-      {/* CLUB SELECTOR */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {Object.entries(teamLabels).map(([id, label]) => (
+      {/* HEADER CLUBS */}
+      <div className="flex gap-2 overflow-x-auto">
+        {(Object.keys(data) as ClubId[]).map((id) => (
           <button
             key={id}
-            onClick={() => setActiveTeam(id as TeamId)}
-            className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
-              activeTeam === id
-                ? 'bg-[hsl(var(--primary))] text-black'
-                : 'bg-[hsl(var(--surface-elevated))] text-white'
+            onClick={() => setClub(id)}
+            className={`px-4 py-2 rounded-full whitespace-nowrap ${
+              club === id ? 'bg-yellow-400 text-black' : 'bg-[#1A1A1A]'
             }`}
           >
-            {label}
+            {data[id].name}
           </button>
         ))}
       </div>
 
-      {/* HEADER */}
-      <div className="tv-card space-y-2">
-        <h2 className="text-2xl font-bold">{teamLabels[activeTeam]}</h2>
-        <p className="text-sm text-[hsl(var(--muted))]">
-          DT: <span className="text-white font-semibold">{dt}</span> · Capitán:{' '}
-          <span className="text-white font-semibold">{capitan}</span>
-        </p>
-
-        {/* STATS */}
-        <div className="grid grid-cols-2 gap-3 mt-3">
-          <div className="bg-[#1A1A1A] rounded-xl p-3 text-center">
-            <p className="text-xs text-[hsl(var(--muted))]">Plantel</p>
-            <p className="text-2xl font-bold text-white">{players.length}</p>
-          </div>
-
-          <div className="bg-[#1A1A1A] rounded-xl p-3 text-center">
-            <p className="text-xs text-[hsl(var(--muted))]">Lesionados</p>
-            <p className="text-2xl font-bold text-red-400">
-              {players.filter(p => p.injured).length}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* TABS */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {tabs.map(tab => {
-          const Icon = tab.icon;
+      {/* NAV TABS */}
+      <div className="flex gap-2 overflow-x-auto">
+        {tabs.map(t => {
+          const Icon = t.icon;
           return (
             <button
-              key={tab.id}
-              onClick={() => setView(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
-                view === tab.id
-                  ? 'bg-[hsl(var(--primary))] text-black'
-                  : 'bg-[hsl(var(--surface-elevated))] text-white'
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full ${
+                tab === t.id ? 'bg-yellow-400 text-black' : 'bg-[#1A1A1A]'
               }`}
             >
               <Icon size={14} />
-              {tab.label}
+              {t.label}
             </button>
           );
         })}
       </div>
 
-      {/* ================= PLANTEL ================= */}
-      {view === 'plantel' && (
-        <div className="space-y-3">
-          {players.map(player => (
-            <div
-              key={player.id}
-              className="bg-[#1A1A1A] rounded-2xl p-4 flex justify-between items-center"
-            >
-              <div className="flex gap-3 items-center">
-                <div className="text-xl font-bold text-[hsl(var(--primary))] w-10 text-center">
-                  {player.number}
-                </div>
+      {/* DT + INFO */}
+      <div className="bg-[#1A1A1A] rounded-xl p-4 border border-white/10">
+        <p className="text-gray-400 text-sm">Director Técnico</p>
+        <p className="text-xl font-bold">{team.dt}</p>
+      </div>
 
-                <div>
-                  <p className="text-white font-semibold">{player.name}</p>
-                  <p className={`text-sm ${posColors[player.position]}`}>
-                    {player.position}
-                  </p>
-                </div>
-              </div>
+      {/* CONTENT */}
+      {tab === 'plantel' && (
+        <div className="space-y-4">
 
-              <div className={`px-3 py-1 rounded-full text-xs font-bold border ${injuredBadge(player.injured)}`}>
-                {player.injured ? 'Lesionado' : 'Disponible'}
-              </div>
+          <h3 className="text-lg font-bold">Arqueros</h3>
+          {renderPlayers(team.players.arqueros)}
+
+          <h3 className="text-lg font-bold">Defensores</h3>
+          {renderPlayers(team.players.defensores)}
+
+          <h3 className="text-lg font-bold">Laterales</h3>
+          {renderPlayers(team.players.laterales)}
+
+          <h3 className="text-lg font-bold">Mediocampistas</h3>
+          {renderPlayers(team.players.mediocampistas)}
+
+          <h3 className="text-lg font-bold">Delanteros</h3>
+          {renderPlayers(team.players.delanteros)}
+        </div>
+      )}
+
+      {tab === 'copas' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {team.titles?.map((t, i) => (
+            <div key={i} className="bg-[#1A1A1A] p-4 rounded-xl border border-white/10">
+              🏆 {t}
             </div>
           ))}
         </div>
       )}
 
-      {/* ================= GOLEADORES ================= */}
-      {view === 'goleadores' && (
-        <div className="space-y-3">
-          {(data.topScorers || []).map((g: any) => (
-            <div key={g.id} className="bg-[#1A1A1A] rounded-xl p-4 flex justify-between">
-              <p className="text-white font-semibold">{g.name}</p>
-              <p className="text-[hsl(var(--primary))] font-bold text-xl">{g.goals}</p>
-            </div>
-          ))}
+      {tab === 'historia' && (
+        <div className="bg-[#1A1A1A] p-4 rounded-xl border border-white/10">
+          Descensos:
+          <ul className="mt-2 list-disc ml-5 text-gray-300">
+            {team.descensos?.map((d, i) => <li key={i}>{d}</li>)}
+          </ul>
         </div>
       )}
 
-      {/* ================= COPAS ================= */}
-      {view === 'copas' && (
-        <div className="grid grid-cols-2 gap-3">
-          {(data.titles || []).map((t: any) => (
-            <div key={t.id} className="bg-[#1A1A1A] p-4 rounded-xl">
-              <p className="text-white font-bold">{t.name}</p>
-              <p className="text-sm text-[hsl(var(--muted))]">{t.year}</p>
-            </div>
-          ))}
+      {/* ZONAS */}
+      <div className="bg-[#1A1A1A] p-4 rounded-xl border border-white/10">
+        <h3 className="font-bold mb-2">Tabla Zonas</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-yellow-400 font-bold">Zona A</p>
+            {zonas.A.map((t, i) => <p key={i}>{t}</p>)}
+          </div>
+          <div>
+            <p className="text-yellow-400 font-bold">Zona B</p>
+            {zonas.B.map((t, i) => <p key={i}>{t}</p>)}
+          </div>
         </div>
-      )}
+      </div>
 
-      {/* ================= HISTORIA ================= */}
-      {view === 'historia' && (
-        <div className="tv-card space-y-2">
-          {(data.history || []).map((h: string, i: number) => (
-            <p key={i} className="text-white border-b border-white/10 py-2">
-              {h}
-            </p>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
