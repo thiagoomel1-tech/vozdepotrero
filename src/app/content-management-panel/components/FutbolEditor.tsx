@@ -64,17 +64,19 @@ const handleSave = async () => {
 
   try {
     const saved = localStorage.getItem("sportsData");
-    let data: any = saved ? JSON.parse(saved) : {};
+    const data = saved ? JSON.parse(saved) : {};
 
-    data[activeTeam] = {
-      ...data[activeTeam],
-      ...teamsData[activeTeam],
-      dt,
-      capitan,
-      players
+    const updated = {
+      ...data,
+      [activeTeam]: {
+        ...(data?.[activeTeam] || {}),
+        dt: dt,
+        capitan: capitan,
+        players: players
+      }
     };
 
-    localStorage.setItem("sportsData", JSON.stringify(data));
+    localStorage.setItem("sportsData", JSON.stringify(updated));
 
     toast.success(
       'Plantel guardado',
@@ -88,7 +90,6 @@ const handleSave = async () => {
 
   setSaving(false);
 };
-
   const posColors: Record<string, string> = {
     ARQ: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
     DEF: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
