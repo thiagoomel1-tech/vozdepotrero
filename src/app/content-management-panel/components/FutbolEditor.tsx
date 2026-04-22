@@ -60,13 +60,39 @@ export default function FutbolEditor() {
     setPlayers((prev) => prev.map((p) => p.id === id ? { ...p, injured: !p.injured } : p));
   };
 
-  const handleSave = async () => {
-    setSaving(true);
-    // Backend integration: PUT /api/teams/{activeTeam} with { dt, capitan, players }
-    await new Promise((r) => setTimeout(r, 800));
-    setSaving(false);
-    toast.success('Plantel guardado', { description: `${teamsData[activeTeam].name} actualizado correctamente.` });
-  };
+const handleSave = async () => {
+  setSaving(true);
+
+  try {
+    const saved = localStorage.getItem("sportsData");
+    const data = saved ? JSON.parse(saved) : teamsData;
+
+    const updated = {
+      ...data,
+      [activeTeam]: {
+        ...data[activeTeam],
+        dt,
+        capitan,
+        players
+      }
+    };
+
+    localStorage.setItem(
+      "sportsData",
+      JSON.stringify(updated)
+    );
+
+    toast.success(
+      'Plantel guardado',
+      { description: `${teamOptions.find(t => t.id === activeTeam)?.label} actualizado correctamente.` }
+    );
+
+  } catch (e) {
+    toast.error("Error guardando datos");
+  }
+
+  setSaving(false);
+};
 
   const posColors: Record<string, string> = {
     ARQ: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
