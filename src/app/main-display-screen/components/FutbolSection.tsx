@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { teamsData } from '@/lib/sportsData';
 import type { Player, Position } from '@/lib/sportsData';
-import { Trophy, Users, Target, AlertTriangle } from 'lucide-react';
+import { Trophy, Users, Target, ScrollText } from 'lucide-react';
 
 type TeamId = 'boca' | 'river' | 'central' | 'newells';
 
@@ -55,26 +55,28 @@ export default function FutbolSection() {
       ? 'bg-red-500/20 text-red-400 border-red-500/30'
       : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
 
-  const tabs: { id: View; label: string; icon: React.ElementType }[] = [
+  const tabs = [
     { id: 'plantel', label: 'Plantel', icon: Users },
     { id: 'goleadores', label: 'Goleadores', icon: Target },
     { id: 'copas', label: 'Copas', icon: Trophy },
-    { id: 'historia', label: 'Historia', icon: AlertTriangle },
-  ];
+    { id: 'historia', label: 'Historia', icon: ScrollText },
+  ] as const;
+
+  const data = teamsData[activeTeam];
 
   return (
     <div className="space-y-5">
 
-      {/* TEAM SELECTOR (burbujas más chicas) */}
+      {/* CLUB SELECTOR */}
       <div className="flex gap-2 overflow-x-auto pb-1">
         {Object.entries(teamLabels).map(([id, label]) => (
           <button
             key={id}
             onClick={() => setActiveTeam(id as TeamId)}
-            className={`px-4 py-2 rounded-full text-sm font-semibold transition-all whitespace-nowrap ${
+            className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
               activeTeam === id
                 ? 'bg-[hsl(var(--primary))] text-black'
-                : 'bg-[hsl(var(--surface-elevated))] text-white hover:opacity-80'
+                : 'bg-[hsl(var(--surface-elevated))] text-white'
             }`}
           >
             {label}
@@ -82,21 +84,22 @@ export default function FutbolSection() {
         ))}
       </div>
 
-      {/* HEADER INFO */}
+      {/* HEADER */}
       <div className="tv-card space-y-2">
         <h2 className="text-2xl font-bold">{teamLabels[activeTeam]}</h2>
         <p className="text-sm text-[hsl(var(--muted))]">
-          DT: <span className="font-semibold text-white">{dt}</span> · Capitán:{' '}
-          <span className="font-semibold text-white">{capitan}</span>
+          DT: <span className="text-white font-semibold">{dt}</span> · Capitán:{' '}
+          <span className="text-white font-semibold">{capitan}</span>
         </p>
 
+        {/* STATS */}
         <div className="grid grid-cols-2 gap-3 mt-3">
-          <div className="bg-[hsl(var(--surface-elevated))] rounded-xl p-3 text-center">
-            <p className="text-xs text-[hsl(var(--muted))]">Jugadores</p>
+          <div className="bg-[#1A1A1A] rounded-xl p-3 text-center">
+            <p className="text-xs text-[hsl(var(--muted))]">Plantel</p>
             <p className="text-2xl font-bold text-white">{players.length}</p>
           </div>
 
-          <div className="bg-[hsl(var(--surface-elevated))] rounded-xl p-3 text-center">
+          <div className="bg-[#1A1A1A] rounded-xl p-3 text-center">
             <p className="text-xs text-[hsl(var(--muted))]">Lesionados</p>
             <p className="text-2xl font-bold text-red-400">
               {players.filter(p => p.injured).length}
@@ -113,7 +116,7 @@ export default function FutbolSection() {
             <button
               key={tab.id}
               onClick={() => setView(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
                 view === tab.id
                   ? 'bg-[hsl(var(--primary))] text-black'
                   : 'bg-[hsl(var(--surface-elevated))] text-white'
@@ -126,22 +129,15 @@ export default function FutbolSection() {
         })}
       </div>
 
-      {/* PLANTEL */}
+      {/* ================= PLANTEL ================= */}
       {view === 'plantel' && (
         <div className="space-y-3">
-          {players.length === 0 && (
-            <div className="tv-card text-center text-[hsl(var(--muted))]">
-              Sin jugadores cargados
-            </div>
-          )}
-
           {players.map(player => (
             <div
               key={player.id}
-              className="bg-[#1A1A1A] rounded-2xl p-4 flex items-center justify-between"
+              className="bg-[#1A1A1A] rounded-2xl p-4 flex justify-between items-center"
             >
-              {/* left */}
-              <div className="flex items-center gap-3">
+              <div className="flex gap-3 items-center">
                 <div className="text-xl font-bold text-[hsl(var(--primary))] w-10 text-center">
                   {player.number}
                 </div>
@@ -154,12 +150,7 @@ export default function FutbolSection() {
                 </div>
               </div>
 
-              {/* right */}
-              <div
-                className={`px-3 py-1 rounded-full text-xs font-bold border ${injuredBadge(
-                  player.injured
-                )}`}
-              >
+              <div className={`px-3 py-1 rounded-full text-xs font-bold border ${injuredBadge(player.injured)}`}>
                 {player.injured ? 'Lesionado' : 'Disponible'}
               </div>
             </div>
@@ -167,24 +158,38 @@ export default function FutbolSection() {
         </div>
       )}
 
-      {/* GOLEADORES (placeholder estético, sin romper datos) */}
+      {/* ================= GOLEADORES ================= */}
       {view === 'goleadores' && (
-        <div className="tv-card text-center text-[hsl(var(--muted))]">
-          Sección de goleadores (conectar con data existente)
+        <div className="space-y-3">
+          {(data.topScorers || []).map((g: any) => (
+            <div key={g.id} className="bg-[#1A1A1A] rounded-xl p-4 flex justify-between">
+              <p className="text-white font-semibold">{g.name}</p>
+              <p className="text-[hsl(var(--primary))] font-bold text-xl">{g.goals}</p>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* COPAS */}
+      {/* ================= COPAS ================= */}
       {view === 'copas' && (
-        <div className="tv-card text-center text-[hsl(var(--muted))]">
-          Sección de copas (grid estilo Selección Argentina)
+        <div className="grid grid-cols-2 gap-3">
+          {(data.titles || []).map((t: any) => (
+            <div key={t.id} className="bg-[#1A1A1A] p-4 rounded-xl">
+              <p className="text-white font-bold">{t.name}</p>
+              <p className="text-sm text-[hsl(var(--muted))]">{t.year}</p>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* HISTORIA */}
+      {/* ================= HISTORIA ================= */}
       {view === 'historia' && (
-        <div className="tv-card text-center text-[hsl(var(--muted))]">
-          Historia del club (pendiente mantener dataset original)
+        <div className="tv-card space-y-2">
+          {(data.history || []).map((h: string, i: number) => (
+            <p key={i} className="text-white border-b border-white/10 py-2">
+              {h}
+            </p>
+          ))}
         </div>
       )}
     </div>
