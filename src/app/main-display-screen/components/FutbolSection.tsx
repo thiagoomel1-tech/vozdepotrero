@@ -1,83 +1,32 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { teamsData } from '@/lib/sportsData';
 import type { Player, Position } from '@/lib/sportsData';
 import { toast } from 'sonner';
-import { PlusCircle, Trash2, Save, User, Shield } from 'lucide-react';
+import { Trash2, Save } from 'lucide-react';
 
 type TeamId = 'boca' | 'river' | 'central' | 'newells';
 
-const teamOptions: { id: TeamId; label: string }[] = [
+const teamOptions = [
   { id: 'boca', label: 'Boca Juniors' },
   { id: 'river', label: 'River Plate' },
   { id: 'central', label: 'Rosario Central' },
   { id: 'newells', label: "Newell's Old Boys" },
 ];
 
-const positions: Position[] = ['ARQ', 'DEF', 'MED', 'DEL'];
-
-// 🎨 Estado visual tipo “chip”
-function StatusChip({ injured }: { injured?: boolean }) {
-  return (
-    <span
-      className={`px-3 py-1 rounded-full text-xs font-bold border transition-all ${
-        injured
-          ? 'bg-[hsl(var(--accent)/0.15)] text-[hsl(var(--accent))] border-[hsl(var(--accent)/0.3)]'
-          : 'bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.3)]'
-      }`}
-    >
-      {injured ? 'Lesionado' : 'Disponible'}
-    </span>
-  );
-}
-
 export default function FutbolEditor() {
   const [activeTeam, setActiveTeam] = useState<TeamId>('boca');
-
-  const [players, setPlayers] = useState<Player[]>(
-    teamsData[activeTeam].players
-  );
-
+  const [players, setPlayers] = useState<Player[]>(teamsData[activeTeam].players);
   const [dt, setDt] = useState(teamsData[activeTeam].dt);
   const [capitan, setCapitan] = useState(teamsData[activeTeam].capitan);
-
   const [saving, setSaving] = useState(false);
-
-  const [newPlayer, setNewPlayer] = useState({
-    number: '',
-    name: '',
-    position: 'DEL' as Position,
-  });
 
   const switchTeam = (id: TeamId) => {
     setActiveTeam(id);
     setPlayers(teamsData[id].players);
     setDt(teamsData[id].dt);
     setCapitan(teamsData[id].capitan);
-  };
-
-  const addPlayer = () => {
-    if (!newPlayer.name.trim() || !newPlayer.number) return;
-
-    const num = parseInt(newPlayer.number);
-
-    const player: Player = {
-      id: `${activeTeam}-${Date.now()}`,
-      number: num,
-      name: newPlayer.name.trim(),
-      position: newPlayer.position,
-    };
-
-    setPlayers((prev) => [...prev, player]);
-    setNewPlayer({ number: '', name: '', position: 'DEL' });
-
-    toast.success('Jugador agregado');
-  };
-
-  const removePlayer = (id: string) => {
-    setPlayers((prev) => prev.filter((p) => p.id !== id));
-    toast.success('Jugador eliminado');
   };
 
   const toggleInjured = (id: string) => {
@@ -88,46 +37,46 @@ export default function FutbolEditor() {
     );
   };
 
+  const removePlayer = (id: string) => {
+    setPlayers((prev) => prev.filter((p) => p.id !== id));
+  };
+
   const handleSave = async () => {
     setSaving(true);
 
-    try {
-      const saved = localStorage.getItem('sportsData');
-      const data = saved ? JSON.parse(saved) : {};
+    const saved = localStorage.getItem('sportsData');
+    const data = saved ? JSON.parse(saved) : {};
 
-      const updated = {
-        ...data,
-        [activeTeam]: {
-          ...(data?.[activeTeam] || {}),
-          dt,
-          capitan,
-          players,
-        },
-      };
+    const updated = {
+      ...data,
+      [activeTeam]: {
+        ...(data?.[activeTeam] || {}),
+        dt,
+        capitan,
+        players,
+      },
+    };
 
-      localStorage.setItem('sportsData', JSON.stringify(updated));
+    localStorage.setItem('sportsData', JSON.stringify(updated));
 
-      toast.success('Plantel guardado correctamente');
-    } catch (err) {
-      toast.error('Error al guardar');
-    }
+    toast.success('Plantel guardado correctamente');
 
     setSaving(false);
   };
 
   return (
-    <div className="space-y-6 fade-in">
+    <div className="space-y-6">
 
-      {/* 🔵 SELECTOR DE EQUIPOS (chips estilo selección) */}
+      {/* 🔥 HEADER EQUIPOS (chips estilo neón) */}
       <div className="flex gap-2 overflow-x-auto">
         {teamOptions.map((t) => (
           <button
             key={t.id}
-            onClick={() => switchTeam(t.id)}
-            className={`px-5 py-2 rounded-full font-semibold transition-all ${
+            onClick={() => switchTeam(t.id as TeamId)}
+            className={`px-5 py-2 rounded-full font-bold border transition-all ${
               activeTeam === t.id
-                ? 'chip-active'
-                : 'chip-inactive'
+                ? 'bg-[#EFFF00] text-black'
+                : 'bg-[#111] text-white border-[#333]'
             }`}
           >
             {t.label}
@@ -136,82 +85,61 @@ export default function FutbolEditor() {
       </div>
 
       {/* 🧠 DT + CAPITÁN */}
-      <div className="tv-card grid grid-cols-2 gap-4">
-        <div>
-          <p className="text-xs text-[hsl(var(--muted))]">Director Técnico</p>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-[#111] p-3 rounded-[18px] text-white">
+          <p className="text-xs text-gray-400">DT</p>
           <input
             value={dt}
             onChange={(e) => setDt(e.target.value)}
-            className="w-full mt-1 px-3 py-2 rounded-xl bg-[hsl(var(--surface-elevated))] border border-[hsl(var(--border))]"
+            className="bg-transparent w-full text-white font-bold outline-none"
           />
         </div>
 
-        <div>
-          <p className="text-xs text-[hsl(var(--muted))]">Capitán</p>
+        <div className="bg-[#111] p-3 rounded-[18px] text-white">
+          <p className="text-xs text-gray-400">Capitán</p>
           <input
             value={capitan}
             onChange={(e) => setCapitan(e.target.value)}
-            className="w-full mt-1 px-3 py-2 rounded-xl bg-[hsl(var(--surface-elevated))] border border-[hsl(var(--border))]"
+            className="bg-transparent w-full text-white font-bold outline-none"
           />
         </div>
       </div>
 
-      {/* ➕ AGREGAR JUGADOR */}
-      <div className="tv-card flex flex-wrap gap-2 items-end">
-        <input
-          placeholder="Nombre"
-          value={newPlayer.name}
-          onChange={(e) =>
-            setNewPlayer((p) => ({ ...p, name: e.target.value }))
-          }
-          className="flex-1 min-w-[120px] px-3 py-2 rounded-xl border"
-        />
-
-        <input
-          placeholder="Nro"
-          value={newPlayer.number}
-          onChange={(e) =>
-            setNewPlayer((p) => ({ ...p, number: e.target.value }))
-          }
-          className="w-20 px-3 py-2 rounded-xl border"
-        />
-
-        <button
-          onClick={addPlayer}
-          className="px-4 py-2 rounded-xl bg-[hsl(var(--primary))] text-white"
-        >
-          <PlusCircle size={16} /> Agregar
-        </button>
-      </div>
-
-      {/* 🧩 JUGADORES (ESTILO “CARDS PRO”) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {/* ⚽ JUGADORES (ESTILO ORIGINAL RESTAURADO) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {players.map((p) => (
           <div
             key={p.id}
-            className="tv-card flex items-center justify-between gap-3"
+            className="bg-[#0a0a0a] border border-[#222] rounded-[18px] p-4 flex justify-between items-center"
           >
+            {/* IZQUIERDA */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[hsl(var(--primary)/0.1)] flex items-center justify-center font-bold text-[hsl(var(--primary))]">
+              <div className="w-10 h-10 rounded-full bg-[#EFFF00] text-black font-bold flex items-center justify-center">
                 {p.number}
               </div>
 
               <div>
-                <p className="font-semibold">{p.name}</p>
-                <p className="text-xs text-[hsl(var(--muted))]">
-                  {p.position}
-                </p>
+                <p className="text-white font-bold">{p.name}</p>
+                <p className="text-xs text-gray-400">{p.position}</p>
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 items-end">
-              <button onClick={() => toggleInjured(p.id)}>
-                <StatusChip injured={p.injured} />
+            {/* DERECHA */}
+            <div className="flex flex-col items-end gap-2">
+              <button
+                onClick={() => toggleInjured(p.id)}
+                className={`px-3 py-1 rounded-full text-xs font-bold ${
+                  p.injured
+                    ? 'bg-red-600 text-white'
+                    : 'bg-green-500 text-black'
+                }`}
+              >
+                {p.injured ? 'Lesionado' : 'Disponible'}
               </button>
 
               <button
                 onClick={() => removePlayer(p.id)}
-                className="text-[hsl(var(--accent))]"
+                className="text-red-400"
               >
                 <Trash2 size={14} />
               </button>
@@ -220,14 +148,14 @@ export default function FutbolEditor() {
         ))}
       </div>
 
-      {/* 💾 GUARDAR */}
+      {/* 💾 SAVE */}
       <div className="flex justify-end">
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-6 py-3 rounded-xl bg-[hsl(var(--primary))] text-white font-bold"
+          className="bg-[#EFFF00] text-black px-6 py-3 rounded-xl font-bold"
         >
-          <Save size={16} /> {saving ? 'Guardando...' : 'Guardar'}
+          <Save size={16} /> {saving ? 'Guardando...' : 'Guardar Plantel'}
         </button>
       </div>
     </div>
