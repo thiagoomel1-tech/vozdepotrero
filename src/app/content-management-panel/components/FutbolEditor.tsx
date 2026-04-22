@@ -1,5 +1,4 @@
 'use client';
-import { useEffect } from 'react';
 import React, { useState } from 'react';
 import { teamsData } from '@/lib/sportsData';
 import type { Player, Position } from '@/lib/sportsData';
@@ -60,28 +59,22 @@ export default function FutbolEditor() {
   const toggleInjured = (id: string) => {
     setPlayers((prev) => prev.map((p) => p.id === id ? { ...p, injured: !p.injured } : p));
   };
-
 const handleSave = async () => {
   setSaving(true);
 
   try {
     const saved = localStorage.getItem("sportsData");
-    const data = saved ? JSON.parse(saved) : teamsData;
+    let data: any = saved ? JSON.parse(saved) : {};
 
-    const updated = {
-      ...data,
-      [activeTeam]: {
-        ...data[activeTeam],
-        dt,
-        capitan,
-        players
-      }
+    data[activeTeam] = {
+      ...data[activeTeam],
+      ...teamsData[activeTeam],
+      dt,
+      capitan,
+      players
     };
 
-    localStorage.setItem(
-      "sportsData",
-      JSON.stringify(updated)
-    );
+    localStorage.setItem("sportsData", JSON.stringify(data));
 
     toast.success(
       'Plantel guardado',
@@ -89,6 +82,7 @@ const handleSave = async () => {
     );
 
   } catch (e) {
+    console.error(e);
     toast.error("Error guardando datos");
   }
 
