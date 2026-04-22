@@ -1,9 +1,10 @@
 'use client';
+
 import React, { useState, useEffect } from 'react';
 import { teamsData } from '@/lib/sportsData';
 import type { Player, Position } from '@/lib/sportsData';
 import { toast } from 'sonner';
-import { Plus, Trash2, Save, AlertCircle } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 
 type TeamId = 'boca' | 'river' | 'central' | 'newells';
 
@@ -17,31 +18,31 @@ const teamOptions: { id: TeamId; label: string }[] = [
 const positions: Position[] = ['ARQ', 'DEF', 'MED', 'DEL'];
 
 export default function FutbolEditor() {
-
   const [activeTeam, setActiveTeam] = useState<TeamId>('boca');
   const [players, setPlayers] = useState<Player[]>(teamsData.boca.players);
   const [dt, setDt] = useState(teamsData.boca.dt);
   const [capitan, setCapitan] = useState(teamsData.boca.capitan);
   const [saving, setSaving] = useState(false);
-  const [addError, setAddError] = useState('');
 
   const [newPlayer, setNewPlayer] = useState({
     number: '',
     name: '',
-    position: 'DEL' as Position
+    position: 'DEL' as Position,
   });
 
-  // cargar datos guardados
+  const [addError, setAddError] = useState('');
+
+  // cargar localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("sportsData");
+    const saved = localStorage.getItem('sportsData');
     if (!saved) return;
 
     try {
       const data = JSON.parse(saved);
       if (data?.[activeTeam]) {
         setPlayers(data[activeTeam].players || []);
-        setDt(data[activeTeam].dt || "");
-        setCapitan(data[activeTeam].capitan || "");
+        setDt(data[activeTeam].dt || '');
+        setCapitan(data[activeTeam].capitan || '');
       }
     } catch {}
   }, [activeTeam]);
@@ -49,15 +50,14 @@ export default function FutbolEditor() {
   const switchTeam = (id: TeamId) => {
     setActiveTeam(id);
 
-    const saved = localStorage.getItem("sportsData");
+    const saved = localStorage.getItem('sportsData');
 
     if (saved) {
       const data = JSON.parse(saved);
-
       if (data?.[id]) {
         setPlayers(data[id].players || []);
-        setDt(data[id].dt || "");
-        setCapitan(data[id].capitan || "");
+        setDt(data[id].dt || '');
+        setCapitan(data[id].capitan || '');
         return;
       }
     }
@@ -80,55 +80,49 @@ export default function FutbolEditor() {
       return;
     }
 
-    const newItem: Player = {
+    const player: Player = {
       id: `${activeTeam}-${Date.now()}`,
       number: num,
-      name: newPlayer.name,
+      name: newPlayer.name.trim(),
       position: newPlayer.position,
-      injured: false
+      injured: false,
     };
 
-    setPlayers([...players, newItem]);
+    setPlayers([...players, player]);
 
-    setNewPlayer({
-      number: '',
-      name: '',
-      position: 'DEL'
-    });
-
+    setNewPlayer({ number: '', name: '', position: 'DEL' });
     setAddError('');
   };
 
   const removePlayer = (id: string) => {
-    setPlayers(players.filter(p => p.id !== id));
+    setPlayers(players.filter((p) => p.id !== id));
   };
 
   const toggleInjured = (id: string) => {
     setPlayers(
-      players.map(p =>
+      players.map((p) =>
         p.id === id ? { ...p, injured: !p.injured } : p
       )
     );
   };
 
   const handleSave = () => {
-
     setSaving(true);
 
-    const saved = localStorage.getItem("sportsData");
+    const saved = localStorage.getItem('sportsData');
     const data = saved ? JSON.parse(saved) : {};
 
     data[activeTeam] = {
       dt,
       capitan,
-      players
+      players,
     };
 
-    localStorage.setItem("sportsData", JSON.stringify(data));
+    localStorage.setItem('sportsData', JSON.stringify(data));
 
     setTimeout(() => {
       setSaving(false);
-      toast.success("Plantel guardado");
+      toast.success('Plantel guardado correctamente');
     }, 500);
   };
 
@@ -142,13 +136,16 @@ export default function FutbolEditor() {
   return (
     <div className="space-y-6">
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      {/* TEAMS */}
+      <div className="flex gap-2 overflow-x-auto pb-2">
         {teamOptions.map((t) => (
           <button
             key={t.id}
             onClick={() => switchTeam(t.id)}
-            className={`px-4 py-2 rounded-full ${
-              activeTeam === t.id ? 'chip-active' : 'chip-inactive'
+            className={`px-5 py-2 rounded-full font-semibold transition ${
+              activeTeam === t.id
+                ? 'bg-yellow-400 text-black'
+                : 'bg-[#1a1a1a] text-white border border-white/10'
             }`}
           >
             {t.label}
@@ -156,78 +153,115 @@ export default function FutbolEditor() {
         ))}
       </div>
 
-      <div className="tv-card">
-        <h3 className="font-bold mb-3">DT</h3>
-        <input
-          value={dt}
-          onChange={(e) => setDt(e.target.value)}
-          className="w-full p-2 border rounded"
-        />
+      {/* DT + CAPITAN */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="tv-card">
+          <p className="text-xs text-gray-400">DT</p>
+          <input
+            value={dt}
+            onChange={(e) => setDt(e.target.value)}
+            className="w-full bg-transparent text-white text-lg font-bold outline-none"
+          />
+        </div>
+
+        <div className="tv-card">
+          <p className="text-xs text-gray-400">Capitán</p>
+          <input
+            value={capitan}
+            onChange={(e) => setCapitan(e.target.value)}
+            className="w-full bg-transparent text-white text-lg font-bold outline-none"
+          />
+        </div>
       </div>
 
-      <div className="tv-card">
-        <h3 className="font-bold mb-3">Capitán</h3>
+      {/* ADD PLAYER */}
+      <div className="tv-card space-y-2">
         <input
-          value={capitan}
-          onChange={(e) => setCapitan(e.target.value)}
-          className="w-full p-2 border rounded"
-        />
-      </div>
-
-      <div className="tv-card space-y-3">
-        <input
-          placeholder="Numero"
+          placeholder="Número"
           value={newPlayer.number}
-          onChange={(e)=>setNewPlayer({...newPlayer,number:e.target.value})}
-          className="w-full p-2 border rounded"
+          onChange={(e) =>
+            setNewPlayer({ ...newPlayer, number: e.target.value })
+          }
+          className="w-full bg-[#111] p-2 rounded text-white"
         />
 
         <input
           placeholder="Nombre"
           value={newPlayer.name}
-          onChange={(e)=>setNewPlayer({...newPlayer,name:e.target.value})}
-          className="w-full p-2 border rounded"
+          onChange={(e) =>
+            setNewPlayer({ ...newPlayer, name: e.target.value })
+          }
+          className="w-full bg-[#111] p-2 rounded text-white"
         />
 
-        <button onClick={addPlayer} className="tv-button">
+        <button
+          onClick={addPlayer}
+          className="w-full bg-yellow-400 text-black font-bold py-2 rounded"
+        >
           Agregar jugador
         </button>
 
-        {addError && <p className="text-red-500">{addError}</p>}
+        {addError && (
+          <p className="text-red-400 text-sm">{addError}</p>
+        )}
       </div>
 
-      <div className="tv-card">
-        { [...players].sort((a,b)=>a.number-b.number).map(player => (
-          <div key={player.id} className="flex justify-between py-2">
+      {/* PLAYERS CARDS */}
+      <div className="grid gap-3">
+        {[...players]
+          .sort((a, b) => a.number - b.number)
+          .map((player) => (
+            <div
+              key={player.id}
+              className="bg-[#1a1a1a] rounded-xl p-4 flex items-center justify-between border border-white/10"
+            >
+              <div className="flex items-center gap-3">
+                <div className="text-yellow-400 font-bold text-xl w-10">
+                  {player.number}
+                </div>
 
-            <div>
-              {player.number} - {player.name}
+                <div>
+                  <p className="text-white font-bold">{player.name}</p>
+
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full border ${posColors[player.position]}`}
+                  >
+                    {player.position}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex gap-2 items-center">
+                <button
+                  onClick={() => toggleInjured(player.id)}
+                  className={`px-3 py-1 rounded-full text-xs font-bold ${
+                    player.injured
+                      ? 'bg-red-500 text-white'
+                      : 'bg-green-500 text-white'
+                  }`}
+                >
+                  {player.injured ? 'Lesionado' : 'Disponible'}
+                </button>
+
+                <button
+                  onClick={() => removePlayer(player.id)}
+                  className="text-gray-400 hover:text-red-500"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </div>
-
-            <div className="flex gap-2">
-
-              <button onClick={()=>toggleInjured(player.id)}>
-                {player.injured ? "Lesionado" : "Disponible"}
-              </button>
-
-              <button onClick={()=>removePlayer(player.id)}>
-                <Trash2 size={16}/>
-              </button>
-
-            </div>
-
-          </div>
-        ))}
+          ))}
       </div>
 
+      {/* SAVE */}
       <button
         onClick={handleSave}
         disabled={saving}
-        className="tv-button"
+        className="w-full bg-yellow-400 text-black font-bold py-3 rounded"
       >
-        {saving ? "Guardando..." : "Guardar Plantel"}
+        {saving ? 'Guardando...' : 'Guardar Plantel'}
       </button>
-
     </div>
   );
 }
