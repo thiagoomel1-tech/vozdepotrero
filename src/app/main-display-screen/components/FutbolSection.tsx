@@ -1,4 +1,5 @@
 'use client';
+import { useMemo } from 'react';
 import React, { useState } from 'react';
 import { teamsData, standingsZonaA, standingsZonaB } from '@/lib/sportsData';
 import type { TeamData, Player, StandingsRow } from '@/lib/sportsData';
@@ -261,7 +262,34 @@ export default function FutbolSection() {
   const [activeSubChip, setActiveSubChip] = useState<SubChip>('plantel');
 
   const isTabla = activeMainChip === 'tabla';
-  const activeTeam = isTabla ? null : teamsData[activeMainChip as TeamId];
+const activeTeamId = isTabla ? null : (activeMainChip as TeamId);
+
+const activeTeam = React.useMemo(() => {
+  if (!activeTeamId) return null;
+
+  const fallback = teamsData[activeTeamId];
+
+  try {
+    const saved = localStorage.getItem('sportsData');
+    if (!saved) return fallback;
+
+    const parsed = JSON.parse(saved);
+
+    const stored = parsed?.[activeTeamId];
+
+    if (!stored) return fallback;
+
+    return {
+      ...fallback,
+      ...stored,
+      players: stored.players ?? fallback.players,
+      dt: stored.dt ?? fallback.dt,
+      capitan: stored.capitan ?? fallback.capitan,
+    };
+  } catch (e) {
+    return fallback;
+  }
+}, [activeMainChip]);
 
   const mainChips: { id: MainChip; label: string; color?: string }[] = [
     { id: 'boca', label: 'Boca', color: '#0038A8' },
