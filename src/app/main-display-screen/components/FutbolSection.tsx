@@ -1,163 +1,192 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { teamsData } from '@/lib/sportsData';
 import type { Player, Position } from '@/lib/sportsData';
-import { toast } from 'sonner';
-import { Trash2, Save } from 'lucide-react';
+import { Trophy, Users, Target, AlertTriangle } from 'lucide-react';
 
 type TeamId = 'boca' | 'river' | 'central' | 'newells';
 
-const teamOptions = [
-  { id: 'boca', label: 'Boca Juniors' },
-  { id: 'river', label: 'River Plate' },
-  { id: 'central', label: 'Rosario Central' },
-  { id: 'newells', label: "Newell's Old Boys" },
-];
+const teamLabels: Record<TeamId, string> = {
+  boca: 'Boca Juniors',
+  river: 'River Plate',
+  central: 'Rosario Central',
+  newells: "Newell's Old Boys",
+};
 
-export default function FutbolEditor() {
+type View = 'plantel' | 'goleadores' | 'copas' | 'historia';
+
+export default function FutbolSection() {
   const [activeTeam, setActiveTeam] = useState<TeamId>('boca');
-  const [players, setPlayers] = useState<Player[]>(teamsData[activeTeam].players);
-  const [dt, setDt] = useState(teamsData[activeTeam].dt);
-  const [capitan, setCapitan] = useState(teamsData[activeTeam].capitan);
-  const [saving, setSaving] = useState(false);
+  const [view, setView] = useState<View>('plantel');
 
-  const switchTeam = (id: TeamId) => {
-    setActiveTeam(id);
-    setPlayers(teamsData[id].players);
-    setDt(teamsData[id].dt);
-    setCapitan(teamsData[id].capitan);
-  };
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [dt, setDt] = useState('');
+  const [capitan, setCapitan] = useState('');
 
-  const toggleInjured = (id: string) => {
-    setPlayers((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, injured: !p.injured } : p
-      )
-    );
-  };
-
-  const removePlayer = (id: string) => {
-    setPlayers((prev) => prev.filter((p) => p.id !== id));
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-
+  useEffect(() => {
     const saved = localStorage.getItem('sportsData');
-    const data = saved ? JSON.parse(saved) : {};
 
-    const updated = {
-      ...data,
-      [activeTeam]: {
-        ...(data?.[activeTeam] || {}),
-        dt,
-        capitan,
-        players,
-      },
-    };
+    if (saved) {
+      const data = JSON.parse(saved);
 
-    localStorage.setItem('sportsData', JSON.stringify(updated));
+      if (data?.[activeTeam]) {
+        setPlayers(data[activeTeam].players || []);
+        setDt(data[activeTeam].dt || '');
+        setCapitan(data[activeTeam].capitan || '');
+        return;
+      }
+    }
 
-    toast.success('Plantel guardado correctamente');
+    setPlayers(teamsData[activeTeam].players);
+    setDt(teamsData[activeTeam].dt);
+    setCapitan(teamsData[activeTeam].capitan);
+  }, [activeTeam]);
 
-    setSaving(false);
+  const posColors: Record<Position, string> = {
+    ARQ: 'text-amber-400',
+    DEF: 'text-blue-400',
+    MED: 'text-emerald-400',
+    DEL: 'text-red-400',
   };
+
+  const injuredBadge = (injured?: boolean) =>
+    injured
+      ? 'bg-red-500/20 text-red-400 border-red-500/30'
+      : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
+
+  const tabs: { id: View; label: string; icon: React.ElementType }[] = [
+    { id: 'plantel', label: 'Plantel', icon: Users },
+    { id: 'goleadores', label: 'Goleadores', icon: Target },
+    { id: 'copas', label: 'Copas', icon: Trophy },
+    { id: 'historia', label: 'Historia', icon: AlertTriangle },
+  ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
 
-      {/* 🔥 HEADER EQUIPOS (chips estilo neón) */}
-      <div className="flex gap-2 overflow-x-auto">
-        {teamOptions.map((t) => (
+      {/* TEAM SELECTOR (burbujas más chicas) */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {Object.entries(teamLabels).map(([id, label]) => (
           <button
-            key={t.id}
-            onClick={() => switchTeam(t.id as TeamId)}
-            className={`px-5 py-2 rounded-full font-bold border transition-all ${
-              activeTeam === t.id
-                ? 'bg-[#EFFF00] text-black'
-                : 'bg-[#111] text-white border-[#333]'
+            key={id}
+            onClick={() => setActiveTeam(id as TeamId)}
+            className={`px-4 py-2 rounded-full text-sm font-semibold transition-all whitespace-nowrap ${
+              activeTeam === id
+                ? 'bg-[hsl(var(--primary))] text-black'
+                : 'bg-[hsl(var(--surface-elevated))] text-white hover:opacity-80'
             }`}
           >
-            {t.label}
+            {label}
           </button>
         ))}
       </div>
 
-      {/* 🧠 DT + CAPITÁN */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-[#111] p-3 rounded-[18px] text-white">
-          <p className="text-xs text-gray-400">DT</p>
-          <input
-            value={dt}
-            onChange={(e) => setDt(e.target.value)}
-            className="bg-transparent w-full text-white font-bold outline-none"
-          />
-        </div>
+      {/* HEADER INFO */}
+      <div className="tv-card space-y-2">
+        <h2 className="text-2xl font-bold">{teamLabels[activeTeam]}</h2>
+        <p className="text-sm text-[hsl(var(--muted))]">
+          DT: <span className="font-semibold text-white">{dt}</span> · Capitán:{' '}
+          <span className="font-semibold text-white">{capitan}</span>
+        </p>
 
-        <div className="bg-[#111] p-3 rounded-[18px] text-white">
-          <p className="text-xs text-gray-400">Capitán</p>
-          <input
-            value={capitan}
-            onChange={(e) => setCapitan(e.target.value)}
-            className="bg-transparent w-full text-white font-bold outline-none"
-          />
-        </div>
-      </div>
-
-      {/* ⚽ JUGADORES (ESTILO ORIGINAL RESTAURADO) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {players.map((p) => (
-          <div
-            key={p.id}
-            className="bg-[#0a0a0a] border border-[#222] rounded-[18px] p-4 flex justify-between items-center"
-          >
-            {/* IZQUIERDA */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#EFFF00] text-black font-bold flex items-center justify-center">
-                {p.number}
-              </div>
-
-              <div>
-                <p className="text-white font-bold">{p.name}</p>
-                <p className="text-xs text-gray-400">{p.position}</p>
-              </div>
-            </div>
-
-            {/* DERECHA */}
-            <div className="flex flex-col items-end gap-2">
-              <button
-                onClick={() => toggleInjured(p.id)}
-                className={`px-3 py-1 rounded-full text-xs font-bold ${
-                  p.injured
-                    ? 'bg-red-600 text-white'
-                    : 'bg-green-500 text-black'
-                }`}
-              >
-                {p.injured ? 'Lesionado' : 'Disponible'}
-              </button>
-
-              <button
-                onClick={() => removePlayer(p.id)}
-                className="text-red-400"
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
+        <div className="grid grid-cols-2 gap-3 mt-3">
+          <div className="bg-[hsl(var(--surface-elevated))] rounded-xl p-3 text-center">
+            <p className="text-xs text-[hsl(var(--muted))]">Jugadores</p>
+            <p className="text-2xl font-bold text-white">{players.length}</p>
           </div>
-        ))}
+
+          <div className="bg-[hsl(var(--surface-elevated))] rounded-xl p-3 text-center">
+            <p className="text-xs text-[hsl(var(--muted))]">Lesionados</p>
+            <p className="text-2xl font-bold text-red-400">
+              {players.filter(p => p.injured).length}
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* 💾 SAVE */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="bg-[#EFFF00] text-black px-6 py-3 rounded-xl font-bold"
-        >
-          <Save size={16} /> {saving ? 'Guardando...' : 'Guardar Plantel'}
-        </button>
+      {/* TABS */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {tabs.map(tab => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setView(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all whitespace-nowrap ${
+                view === tab.id
+                  ? 'bg-[hsl(var(--primary))] text-black'
+                  : 'bg-[hsl(var(--surface-elevated))] text-white'
+              }`}
+            >
+              <Icon size={14} />
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
+
+      {/* PLANTEL */}
+      {view === 'plantel' && (
+        <div className="space-y-3">
+          {players.length === 0 && (
+            <div className="tv-card text-center text-[hsl(var(--muted))]">
+              Sin jugadores cargados
+            </div>
+          )}
+
+          {players.map(player => (
+            <div
+              key={player.id}
+              className="bg-[#1A1A1A] rounded-2xl p-4 flex items-center justify-between"
+            >
+              {/* left */}
+              <div className="flex items-center gap-3">
+                <div className="text-xl font-bold text-[hsl(var(--primary))] w-10 text-center">
+                  {player.number}
+                </div>
+
+                <div>
+                  <p className="text-white font-semibold">{player.name}</p>
+                  <p className={`text-sm ${posColors[player.position]}`}>
+                    {player.position}
+                  </p>
+                </div>
+              </div>
+
+              {/* right */}
+              <div
+                className={`px-3 py-1 rounded-full text-xs font-bold border ${injuredBadge(
+                  player.injured
+                )}`}
+              >
+                {player.injured ? 'Lesionado' : 'Disponible'}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* GOLEADORES (placeholder estético, sin romper datos) */}
+      {view === 'goleadores' && (
+        <div className="tv-card text-center text-[hsl(var(--muted))]">
+          Sección de goleadores (conectar con data existente)
+        </div>
+      )}
+
+      {/* COPAS */}
+      {view === 'copas' && (
+        <div className="tv-card text-center text-[hsl(var(--muted))]">
+          Sección de copas (grid estilo Selección Argentina)
+        </div>
+      )}
+
+      {/* HISTORIA */}
+      {view === 'historia' && (
+        <div className="tv-card text-center text-[hsl(var(--muted))]">
+          Historia del club (pendiente mantener dataset original)
+        </div>
+      )}
     </div>
   );
 }
