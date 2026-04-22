@@ -1,4 +1,5 @@
 'use client';
+import { useEffect } from 'react';
 import React, { useState } from 'react';
 import { teamsData } from '@/lib/sportsData';
 import type { Player, Position } from '@/lib/sportsData';
@@ -100,7 +101,17 @@ const handleSave = async () => {
     MED: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
     DEL: 'bg-red-500/20 text-red-400 border-red-500/30',
   };
+const [addError, setAddError] = useState('');
 
+useEffect(() => {
+  const saved = localStorage.getItem("sportsData");
+  if (saved) {
+    const parsed = JSON.parse(saved);
+    setPlayers(parsed[activeTeam].players);
+    setDt(parsed[activeTeam].dt);
+    setCapitan(parsed[activeTeam].capitan);
+  }
+}, [activeTeam]);
   return (
     <div className="space-y-6">
       {/* Team selector */}
