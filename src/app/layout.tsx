@@ -10,8 +10,10 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'Voz de Potrero — Datos Deportivos en Vivo para TV',
   description: 'Herramienta de datos deportivos en vivo para productores de televisión argentina — fútbol, F1 y selección al instante.',
+   manifest: "/manifest.json",
   icons: {
-    icon: [{ url: '/favicon.ico', type: 'image/x-icon' }],
+    icon: "/icon-192.png",
+    apple: "/icon-192.png",
   },
 };
 
