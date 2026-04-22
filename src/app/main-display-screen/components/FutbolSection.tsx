@@ -257,19 +257,23 @@ function HistoriaView({ team }: { team: TeamData }) {
 type MainChip = TeamId | 'tabla';
 
 export default function FutbolSection() {
-  const [teams, setTeams] = useState(teamsData);
+ const [teams, setTeams] = useState<any>(teamsData);
 
 useEffect(() => {
-  const saved = localStorage.getItem("sportsData");
-  if (saved) {
-    setTeams(JSON.parse(saved));
+  try {
+    const saved = localStorage.getItem("sportsData");
+    if (saved) {
+      setTeams(JSON.parse(saved));
+    }
+  } catch (e) {
+    console.log("error loading saved data");
   }
 }, []);
   const [activeMainChip, setActiveMainChip] = useState<MainChip>('boca');
   const [activeSubChip, setActiveSubChip] = useState<SubChip>('plantel');
 
   const isTabla = activeMainChip === 'tabla';
-  const activeTeam = isTabla ? null : teams[activeMainChip as TeamId];
+  const activeTeam = isTabla ? null : teams?.[activeMainChip as TeamId];
 
   const mainChips: { id: MainChip; label: string; color?: string }[] = [
     { id: 'boca', label: 'Boca', color: '#0038A8' },
