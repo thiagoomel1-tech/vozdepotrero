@@ -97,15 +97,6 @@ const handleSave = async () => {
   };
 const [addError, setAddError] = useState('');
 
-useEffect(() => {
-  const saved = localStorage.getItem("sportsData");
-  if (saved) {
-    const parsed = JSON.parse(saved);
-    setPlayers(parsed[activeTeam].players);
-    setDt(parsed[activeTeam].dt);
-    setCapitan(parsed[activeTeam].capitan);
-  }
-}, [activeTeam]);
   return (
     <div className="space-y-6">
       {/* Team selector */}
